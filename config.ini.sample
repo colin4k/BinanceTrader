@@ -1,0 +1,6 @@
+[Database]
+path = ./orders.db
+
+[Binance]
+api_key = 1111111111
+api_secret = 2222222222
