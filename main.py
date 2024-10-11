@@ -4,7 +4,7 @@ import configparser
 import datetime  # 添加此导入
 import math
 from push import push_message
-
+import configparser
 
 # 在文件开头添加以下函数
 def adapt_datetime(dt):
@@ -12,36 +12,6 @@ def adapt_datetime(dt):
 
 def convert_datetime(s):
     return datetime.datetime.fromisoformat(s)
-
-# 在主代码之前添加以下注册
-sqlite3.register_adapter(datetime.datetime, adapt_datetime)
-sqlite3.register_converter("timestamp", convert_datetime)
-
-import configparser
-
-# 读取配置文件
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-# 初始化 Binance Spot 客户端
-# 从配置文件中获取API密钥和密码
-api_key = config['Binance']['api_key']
-api_secret = config['Binance']['api_secret']
-client = Spot(api_key=api_key, api_secret=api_secret)
-
-# 从配置文件中获取数据库文件的绝对路径
-db_path = config['Database']['path']
-
-# 修改数据库连接代码
-conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
-cursor = conn.cursor()
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS orders
-    (orderId TEXT PRIMARY KEY, symbol TEXT, side TEXT, price REAL, quantity REAL, status TEXT, effection INTEGER,
-    createTime TIMESTAMP, updateTime TIMESTAMP)
-    ''')
-conn.commit()
 
 def print_orders(orders):
     #count_valid_orders = sum(1 for order in orders if order['status'] == 'NEW')
@@ -133,7 +103,7 @@ def get_current_price(client,symbol):
 
 
 def main():
-    symbol = "FETUSDT"
+    symbol = config['Binance']['symbol']
     cursor.execute('SELECT COUNT(*) FROM orders WHERE symbol = ?', (symbol,))
     if cursor.fetchone()[0] == 0:
         print("数据库为空,正在初始化...")
@@ -180,6 +150,33 @@ def main():
 
 if __name__ == "__main__":
     try:
+        # 在主代码之前添加以下注册
+        sqlite3.register_adapter(datetime.datetime, adapt_datetime)
+        sqlite3.register_converter("timestamp", convert_datetime)
+
+        # 读取配置文件
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+
+        # 初始化 Binance Spot 客户端
+        # 从配置文件中获取API密钥和密码
+        api_key = config['Binance']['api_key']
+        api_secret = config['Binance']['api_secret']
+        client = Spot(api_key=api_key, api_secret=api_secret)
+
+        # 从配置文件中获取数据库文件的绝对路径
+        db_path = config['Database']['path']
+
+        # 修改数据库连接代码
+        conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS orders
+            (orderId TEXT PRIMARY KEY, symbol TEXT, side TEXT, price REAL, quantity REAL, status TEXT, effection INTEGER,
+            createTime TIMESTAMP, updateTime TIMESTAMP)
+            ''')
+        conn.commit()
         main()
     except KeyboardInterrupt:
         print("程序已停止")
