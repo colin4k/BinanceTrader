@@ -159,11 +159,7 @@ def main():
             
         else:
             print(f"订单 {db_order['orderId']} 仍然活跃")
-            
-            
-    
-    # 保存当前活跃订单到数据库
-    save_orders_to_db(active_orders)
+
         
 
 if __name__ == "__main__":
