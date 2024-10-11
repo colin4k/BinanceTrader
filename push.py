@@ -38,9 +38,8 @@ def push_message(title, content, template="html", topic="", channel="wechat"):
 
 # 使用示例
 if __name__ == "__main__":
-    token = "your_token_here"
     title = "测试标题"
     content = "这是一条测试消息"
     
-    result = push_message(token, title, content)
+    result = push_message(title, content)
     print(result)
