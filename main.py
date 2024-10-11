@@ -157,8 +157,8 @@ def main():
             if new_order:
                 save_orders_to_db([new_order])  # 注意这里的修改
             
-        else:
-            print(f"订单 {db_order['orderId']} 仍然活跃")
+        #else:
+        #    print(f"订单 {db_order['orderId']} 仍然活跃")
 
         
 
