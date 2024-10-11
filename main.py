@@ -122,6 +122,16 @@ def print_db_orders(db_orders):
 def order_exists_in_active_orders(order_id, active_orders):
     return any(str(active_order['orderId']) == str(order_id) for active_order in active_orders)
 
+# 获取当前symbol的价格
+def get_current_price(client,symbol):
+    try:
+        ticker = client.ticker_price(symbol=symbol)
+        return float(ticker['price'])
+    except Exception as e:
+        print(f"获取{symbol}价格时发生错误: {e}")
+        return None
+
+
 def main():
     symbol = "FETUSDT"
     cursor.execute('SELECT COUNT(*) FROM orders WHERE symbol = ?', (symbol,))
@@ -129,11 +139,9 @@ def main():
         print("数据库为空,正在初始化...")
         initialize_db(symbol)
     active_orders = get_active_orders(symbol)
-    #print("当前活跃订单:")
-    #print_orders(active_orders)
+
     db_orders = get_db_orders(symbol)
-    #print("数据库中订单:")
-    #print_db_orders(db_orders)
+
     # 检查是否有订单成交
     for order_id, db_order in db_orders.items():
         #print(db_order)
@@ -163,7 +171,12 @@ def main():
         #else:
         #    print(f"订单 {db_order['orderId']} 仍然活跃")
 
-        
+    
+    current_price = get_current_price(client, symbol)
+    if current_price:
+        print(f"{symbol}的当前价格为: {current_price}")
+    else:
+        print(f"无法获取{symbol}的当前价格")
 
 if __name__ == "__main__":
     try:
