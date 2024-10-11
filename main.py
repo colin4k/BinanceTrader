@@ -4,6 +4,17 @@ import configparser
 import datetime  # 添加此导入
 import math
 
+# 在文件开头添加以下函数
+def adapt_datetime(dt):
+    return dt.isoformat()
+
+def convert_datetime(s):
+    return datetime.datetime.fromisoformat(s)
+
+# 在主代码之前添加以下注册
+sqlite3.register_adapter(datetime.datetime, adapt_datetime)
+sqlite3.register_converter("timestamp", convert_datetime)
+
 # 连接到SQLite数据库
 import configparser
 
@@ -20,8 +31,8 @@ client = Spot(api_key=api_key, api_secret=api_secret)
 # 从配置文件中获取数据库文件的绝对路径
 db_path = config['Database']['path']
 
-# 连接到SQLite数据库
-conn = sqlite3.connect(db_path)
+# 修改数据库连接代码
+conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
 cursor = conn.cursor()
 
 cursor.execute('''
