@@ -174,7 +174,7 @@ def main():
     
     current_price = get_current_price(client, symbol)
     if current_price:
-        print(f"{symbol}的当前价格为: {current_price}")
+        print(f"当前时间:{datetime.datetime.now()}, {symbol}的当前价格为: {current_price}")
     else:
         print(f"无法获取{symbol}的当前价格")
 
