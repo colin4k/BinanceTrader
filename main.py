@@ -3,6 +3,8 @@ from binance.spot import Spot
 import configparser
 import datetime  # 添加此导入
 import math
+from push import push_message
+
 
 # 在文件开头添加以下函数
 def adapt_datetime(dt):
@@ -15,7 +17,6 @@ def convert_datetime(s):
 sqlite3.register_adapter(datetime.datetime, adapt_datetime)
 sqlite3.register_converter("timestamp", convert_datetime)
 
-# 连接到SQLite数据库
 import configparser
 
 # 读取配置文件
@@ -90,9 +91,11 @@ def place_new_order(symbol, side, price, quantity):
             price=f"{rounded_price:.8f}".rstrip('0').rstrip('.')
         )
         print(f"新订单已下: {new_order}")
+        push_message(title="新订单通知", content=f"新订单已下: {new_order}")
         return new_order
     except Exception as e:
         print(f"下单失败: {e}")
+        push_message(title="下单失败", content=f"下单失败: {e}")
         return None
 
 def get_symbol_info(client, symbol):
