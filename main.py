@@ -120,8 +120,8 @@ def check_and_save_new_orders(active_orders, db_orders):
     if new_orders:
         save_orders_to_db(new_orders)
         print(f"已添加 {len(new_orders)} 个新订单到数据库")
-    else:
-        print("没有发现新的有效订单")
+    #else:
+    #    print("没有发现新的有效订单")
 
 def main():
     symbol = config['Binance']['symbol']
