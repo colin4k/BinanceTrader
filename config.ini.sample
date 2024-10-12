@@ -5,6 +5,6 @@ path = ./orders.db
 api_key = 1111111111
 api_secret = 2222222222
 symbol=BTCUSDT
-
+price_step=0.01
 [PushPlus]
 token = 你的token

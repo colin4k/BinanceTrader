@@ -101,52 +101,82 @@ def get_current_price(client,symbol):
         print(f"获取{symbol}价格时发生错误: {e}")
         return None
 
+def check_order_status(client, symbol, order_id):
+    try:
+        order_info = client.get_order(symbol=symbol, orderId=order_id)
+        return order_info['status']
+    except Exception as e:
+        print(f"获取订单状态时发生错误: {e}")
+        return None
+
+def check_and_save_new_orders(active_orders, db_orders):
+    new_orders = []
+    for active_order in active_orders:
+        order_id = str(active_order['orderId'])
+        if active_order['status'] == 'NEW' and not any(order_id == str(db_order['orderId']) for db_order in db_orders.values()):
+            print(f"发现新的有效订单：{order_id}")
+            new_orders.append(active_order)
+    
+    if new_orders:
+        save_orders_to_db(new_orders)
+        print(f"已添加 {len(new_orders)} 个新订单到数据库")
+    else:
+        print("没有发现新的有效订单")
 
 def main():
     symbol = config['Binance']['symbol']
     cursor.execute('SELECT COUNT(*) FROM orders WHERE symbol = ?', (symbol,))
     if cursor.fetchone()[0] == 0:
-        print("数据库为空,正在初始化...")
+        print("数据库为空，正在初始化...")
         initialize_db(symbol)
+    
     active_orders = get_active_orders(symbol)
-
     db_orders = get_db_orders(symbol)
 
     # 检查是否有订单成交
     for order_id, db_order in db_orders.items():
-        #print(db_order)
         if not order_exists_in_active_orders(db_order['orderId'], active_orders):
-            # 处理不再活跃的订单
-            print(f"订单 {db_order['orderId']} 不再活跃")
-            # 这里添加处理不再活跃订单的逻辑
-            # 更新数据库中的订单状态和 effection 字段
-            current_time = datetime.datetime.now()
-            cursor.execute('UPDATE orders SET effection = 0, updateTime = ? WHERE orderId = ?', (current_time, order_id))
-            conn.commit()
+            # 通过API检查订单状态
+            order_status = check_order_status(client, db_order['symbol'], db_order['orderId'])
             
-            # 下新订单
-            symbol = db_order['symbol']
-            quantity = db_order['quantity']
-            if db_order['side'] == 'BUY':
-                new_price = float(db_order['price']) + 0.1
-                new_side = 'SELL'
+            if order_status == 'FILLED':
+                print(f"订单 {db_order['orderId']} 已成交")
+                # 更新数据库中的订单状态和 effection 字段
+                current_time = datetime.datetime.now()
+                cursor.execute('UPDATE orders SET status = ?, effection = 0, updateTime = ? WHERE orderId = ?', 
+                               ('FILLED', current_time, order_id))
+                conn.commit()
+                
+                # 下新订单
+                symbol = db_order['symbol']
+                quantity = db_order['quantity']
+                price_step = float(config['Binance']['price_step'])
+                if db_order['side'] == 'BUY':
+                    new_price = round(float(db_order['price']) + 10 * price_step, 2)
+                    new_side = 'SELL'
+                else:
+                    new_price = round(float(db_order['price']) - 10 * price_step, 2)
+                    new_side = 'BUY'
+                
+                new_order = place_new_order(symbol, new_side, new_price, quantity)
+                if new_order:
+                    save_orders_to_db([new_order])
             else:
-                new_price = float(db_order['price']) - 0.1
-                new_side = 'BUY'
-            
-            new_order = place_new_order(symbol, new_side, new_price, quantity)
-            if new_order:
-                save_orders_to_db([new_order])  # 注意这里的修改
-            
-        #else:
-        #    print(f"订单 {db_order['orderId']} 仍然活跃")
+                print(f"订单 {db_order['orderId']} 状态为 {order_status}，将其effection设置为0")
+                # 更新数据库中的订单状态和 effection 字段
+                current_time = datetime.datetime.now()
+                cursor.execute('UPDATE orders SET status = ?, effection = 0, updateTime = ? WHERE orderId = ?', 
+                               (order_status, current_time, order_id))
+                conn.commit()
 
-    
+    # 检查并保存新的有效订单
+    check_and_save_new_orders(active_orders, db_orders)
+
     current_price = get_current_price(client, symbol)
     if current_price:
         print(f"当前时间:{datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))}, {symbol}的当前价格为: {current_price}")
     else:
-        print(f"无法获取{symbol}的当前价格")
+        print(f"当前时间:{datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))}, 无法获取{symbol}的当前价格")
 
 if __name__ == "__main__":
     try:
@@ -159,7 +189,7 @@ if __name__ == "__main__":
         config.read('config.ini')
 
         # 初始化 Binance Spot 客户端
-        # 从配置文件中获取API密钥和密码
+        # 从配置文件中获取API密钥和密
         api_key = config['Binance']['api_key']
         api_secret = config['Binance']['api_secret']
         client = Spot(api_key=api_key, api_secret=api_secret)
